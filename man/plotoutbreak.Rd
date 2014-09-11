@@ -18,7 +18,7 @@ blockheight = 0.5, hspace = max(epidata[,3])/20, labels = NULL, label.pos = "lef
 	Simulated epidemiological data - matrix consisting of person IDs, infection and recovery times, and infection source.
 }
   \item{sampledata}{
-	Simulated genomic sample data - matrix of person IDs, sample times and genome ID.
+	Simulated genomic sample data - matrix of person IDs, sample times and genome ID. Genomic sample data simulated with \code{full=TRUE} cannot be used.
 }
   \item{col}{
 	A vector of colors to represent increasing genetic distance.

@@ -1,6 +1,14 @@
 plotoutbreak <-
 function(epidata, sampledata, col="red", stack=TRUE, arr.len=0.1, blockheight=0.5, hspace=max(epidata[,3])/20,
                           labels=NULL, label.pos="left", block.col="grey", jitter=0, pch=1, ...) {
+  
+  if (blockheight<0 || blockheight>1) {
+    stop("block.height must take a value between 0 and 1")
+  }
+  if (colnames(sampledata)[1]=="pID") {
+    warning("Cannot input 'full' sampling data. Please create a subset of the genomic sample data")
+    sampledata <- NULL
+  }
   IDvec <- epidata[,1]
   inf.times <- epidata[,2]
   rec.times <- epidata[,3]
@@ -8,7 +16,7 @@ function(epidata, sampledata, col="red", stack=TRUE, arr.len=0.1, blockheight=0.
   
   sampleID <- sampledata[,1]
   sample.times <- sampledata[,2]
-  if (length(col)==1) {
+  if (length(col)==1 && !is.null(sampledata)) {
     col <- rep(col, nrow(sampledata))
   }
   if (length(block.col)==1) {
@@ -62,7 +70,7 @@ function(epidata, sampledata, col="red", stack=TRUE, arr.len=0.1, blockheight=0.
     } else if (label.pos=="left") {
       text(inf.times[i], row[i],labels[i], cex=0.75, pos=2, offset=0.2)      
     }
-    if (i>1) {
+    if (inf.source[i]!=0) {
       if (row[which(IDvec==inf.source[i])]>row[i]) {
         arrows(inf.times[i],row[which(IDvec==inf.source[i])]-blockheight/2, inf.times[i], row[i]+blockheight/2, 
                col="black", angle=20, length=arr.len)

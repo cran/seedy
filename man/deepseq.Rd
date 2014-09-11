@@ -5,7 +5,7 @@
 	Deep-sequenced bacterial samples
 }
 \description{
-	Simulated deep-sequence samples within a host.
+	Simulated deep-sequence samples within a host. Equilibrium population 10000, mutation rate 0.001 per site per generation, genome length 100kb, sampled every 1000 generations until 25000.
 }
 \usage{
 	deepseq

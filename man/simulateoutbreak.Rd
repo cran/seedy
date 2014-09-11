@@ -11,8 +11,8 @@
 simulateoutbreak(init.sus, inf.rate, rem.rate, mut.rate, nmat = NULL, 
                  equi.pop = 10000, init.inf = 1, inoc.size = 1, 
                  samples.per.time = 1, samp.schedule = "random", 
-                 samp.freq = 500, mincases = 1, feedback = 500, 
-                 glen = 1e+05, ref.strain = NULL)
+                 samp.freq = 500, full=FALSE, mincases = 1, 
+                 feedback = 500, glen = 1e+05, ref.strain = NULL)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -48,6 +48,8 @@ simulateoutbreak(init.sus, inf.rate, rem.rate, mut.rate, nmat = NULL,
 }
   \item{samp.freq}{
 	Number of generations between each sampling time (see \code{samp.schedule}).
+}
+  \item{full}{Should `full' genomic sampling be returned? That is, should a vector of genotypes and their respective frequencies be stored from each individual's sampling times?
 }
   \item{mincases}{
 	Minimum final size of outbreak to output. If final size is less than this value, another outbreak is simulated.

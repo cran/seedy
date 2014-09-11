@@ -1,7 +1,63 @@
 simulateoutbreak <-
 function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000, 
-                                   init.inf=1, inoc.size=1, samples.per.time=1, samp.schedule="random", 
-                                   samp.freq=500, mincases=1, feedback=500, glen=100000, ref.strain=NULL) {
+         init.inf=1, inoc.size=1, samples.per.time=1, samp.schedule="random", 
+         samp.freq=500, full=FALSE, mincases=1, feedback=500, glen=100000, 
+         ref.strain=NULL) {
+  
+  # WARNINGS
+  
+  if (init.sus%%1!=0 || init.sus<1) {
+    stop("Initial number of susceptibles must be a postive integer")
+  }
+  if (init.inf%%1!=0 || init.inf<1) {
+    stop("Initial number of susceptibles must be a postive integer")
+  }
+  if (inoc.size%%1!=0 || inoc.size<1) {
+    stop("Inoculum size must be a postive integer")
+  }
+  if (samp.freq%%1!=0 || samp.freq<1) {
+    stop("samp.freq must be a postive integer")
+  }
+  if (feedback%%1!=0 || feedback<1) {
+    stop("feedback must be a postive integer")
+  }
+  if (glen%%1!=0 || glen<1) {
+    stop("Genome length must be a postive integer")
+  }
+  if (mincases%%1!=0 || mincases<1 || mincases>init.sus+init.inf) {
+    stop("Minimum cases must be a postive integer not greater than init.sus+init.inf")
+  }
+  if (samples.per.time%%1!=0 || samples.per.time<1) {
+    stop("samples.per.time must be a postive integer")
+  }
+  if (inf.rate<=0) {
+    stop("Infection rate must be greater than zero")
+  }
+  if (rem.rate<=0) {
+    stop("Removal rate must be greater than zero")
+  }
+  if (mut.rate<0 || mut.rate>=1) {
+    stop("Mutation rate must be between 0 and 1")
+  }
+  if (!is.null(nmat)) {
+    if (!is.matrix(nmat)) {
+      stop("nmat must be a matrix")
+    } else {
+      if (nrow(nmat)!=init.sus+init.inf || ncol(nmat)!=init.sus+init.inf) {
+        stop("nmat must have init.sus+init.inf rows and columns")
+      } else if (sum(nmat<0)>0) {
+        stop("All entries of nmat must be >= 0")
+      }
+    }
+  }
+  if (equi.pop%%1!=0 || equi.pop<=0) {
+    stop("Equilibrium population size must be a postive integer")
+  }
+  if (!samp.schedule%in%c("random", "calendar", "individual")) {
+    stop("samp.schedule must be 'random', 'calendar', or 'individual'")
+  }
+  
+  #########################
   
   cat("\nSimulating outbreak:\n")
   cat("N=",equi.pop, ", b=", inoc.size, ", beta=", inf.rate, 
@@ -29,6 +85,8 @@ function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000,
     inf.source <- rep(0,init.inf) # source of infection for each individual
     if (is.null(ref.strain)) {
       ref.strain <- sample(1:4, glen, replace=T) # reference strain
+    } else {
+      glen <- length(ref.strain)
     }
     totcurstrains <- 1 # current list of strains
     uniquestrains <- 1 # Number of unique strain types
@@ -43,8 +101,13 @@ function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000,
       if (sample.times[i]>rec.times[i]) {
         sample.times[i] <- Inf
       }
-      libr[[i]] <- sample(glen,1)
-      mut.nuc[[i]] <- sample((1:4)[-ref.strain[libr[[i]]]], 1)
+      if (i == 1) {
+        libr[[i]] <- NA
+        mut.nuc[[i]] <- NA      
+      } else {
+        libr[[i]] <- sample(glen,1)
+        mut.nuc[[i]] <- sample((1:4)[-ref.strain[libr[[i]]]], 1)
+      }
       freq.log[[i]] <- 1
       strain.log[[i]] <- 1
     }
@@ -58,10 +121,17 @@ function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000,
     types <- 1 # Cumulative number of strain types
     
     #Sample logs
-    sampleWGS <- NULL
-    sampleID <- NULL
+    if (full) {
+      obs.freq <- list()
+      obs.strain <- list()
+      pID <- NULL
+    } else {
+      sampleWGS <- NULL
+      samplepick <- NULL
+    }
+    
     sampletimes <- NULL
-    samplepick <- NULL
+    sampleID <- NULL
     
     while (length(cur.inf) > 0) { # Cycle through bacterial generations until epidemic ceases
       time <- time+1
@@ -218,7 +288,7 @@ function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000,
               mut.loc <- sample(glen, 1)
               mut.nuc[[length(totcurstrains)+1]] <- 
                 mut.nuc[[which(totcurstrains==mutate.grp)]]
-              if (mut.loc %in% libr[[which(totcurstrains==mutate.grp)]]) {
+              if (mut.loc %in% libr[[which(totcurstrains==mutate.grp)]]) { # if mutation at existing location
                 kn <- which(libr[[which(totcurstrains==mutate.grp)]]==mut.loc)
                 mut.nuc[[length(totcurstrains)+1]][kn] <- sample((1:4)[-mut.nuc[[which(totcurstrains==mutate.grp)]][kn]], 1)
                 libr[[length(totcurstrains)+1]] <- libr[[which(totcurstrains==mutate.grp)]]
@@ -228,6 +298,10 @@ function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000,
                     sample((1:4)[-ref.strain[mut.loc]], 1))
                 libr[[length(totcurstrains)+1]] <- 
                   c(libr[[which(totcurstrains==mutate.grp)]], mut.loc)
+              }
+              if (sum(is.na(mut.nuc[[length(totcurstrains)+1]]))>0) {
+                mut.nuc[[length(totcurstrains)+1]] <- mut.nuc[[length(totcurstrains)+1]][-is.na(mut.nuc[[length(totcurstrains)+1]])]
+                libr[[length(totcurstrains)+1]] <- libr[[length(totcurstrains)+1]][-is.na(libr[[length(totcurstrains)+1]])]
               }
               strain.log[[i]] <- c(strain.log[[i]], types)
               freq.log[[i]] <- c(freq.log[[i]], 1)
@@ -240,52 +314,62 @@ function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000,
       if (time%in%sample.times) {
         smpat <- inf.ID[which(sample.times==time)]
         for (i in smpat) {
-          for (j in 1:samples.per.time) {
-            if (length(strain.log[[i]])==1) {
-              pickgrp <- strain.log[[i]]
-            } else {
-              pickgrp <- sample(strain.log[[i]], 1, prob=freq.log[[i]])
-            }
-            sampleWGS <- c(sampleWGS, pickgrp)
-            if (0%in%sampleWGS) {
-              stop("Sampled zeroes")
-            }
-            sampleID <- c(sampleID, i)
-            samplepick <- c(samplepick, j)
+          if (full) {
+            n <- length(obs.freq)+1
+            obs.freq[[n]] <- freq.log[[i]]
+            obs.strain[[n]] <- strain.log[[i]]
+            sampleID <- c(sampleID, n)
+            pID <- c(pID, i)
             sampletimes <- c(sampletimes, time)
+          } else {
+            for (j in 1:samples.per.time) {
+              if (length(strain.log[[i]])==1) {
+                pickgrp <- strain.log[[i]]
+              } else {
+                pickgrp <- sample(strain.log[[i]], 1, prob=freq.log[[i]])
+              }
+              sampleWGS <- c(sampleWGS, pickgrp)
+              if (0%in%sampleWGS) {
+                stop("Sampled zeroes")
+              }
+              sampleID <- c(sampleID, i)
+              samplepick <- c(samplepick, j)
+              sampletimes <- c(sampletimes, time)
+            }
           }
-          if (samp.schedule != "random" && rec.times[which(inf.ID==i)] >= time + samp.freq) {
+          if (samp.schedule != "random" && rec.times[which(inf.ID==i)] > time + samp.freq) {
             sample.times[which(inf.ID==i)] <- time + samp.freq
           }
         }
       }
-      
       # clean up libr etc.
-      deleters <- NULL
-      uniquestrains <- 0
-      for (j in 1:length(totcurstrains)) {
-        tottype <- 0
-        for (k in cur.inf) {
-          if (totcurstrains[j]%in%strain.log[[k]]) { # if strain is extant
-            tottype <- tottype+1
+      if (!full) {
+        deleters <- NULL
+        uniquestrains <- 0
+        for (j in 1:length(totcurstrains)) {
+          tottype <- 0
+          for (k in cur.inf) {
+            if (totcurstrains[j]%in%strain.log[[k]]) { # if strain is extant
+              tottype <- tottype+1
+            }
+            if (sum(!strain.log[[k]]%in%totcurstrains)>0) {
+              stop("Deleted sequence for observed sample")
+            }
           }
-          if (sum(!strain.log[[k]]%in%totcurstrains)>0) {
-            stop("Deleted sequence for observed sample")
+          if (tottype>0) { # don't delete if still around
+            uniquestrains <- uniquestrains+1
+          } else if (tottype==0 && !totcurstrains[j]%in%sampleWGS) { # if not around AND not logged
+            deleters <- c(deleters, j) # delete
           }
         }
-        if (tottype>0) { # don't delete if still around
-          uniquestrains <- uniquestrains+1
-        } else if (tottype==0 && !totcurstrains[j]%in%sampleWGS) { # if not around AND not logged
-          deleters <- c(deleters, j) # delete
+        if (length(deleters)>0) {
+          for (i in sort(deleters, decreasing=T)) {
+            libr[[i]] <- NULL
+            mut.nuc[[i]] <- NULL
+          }
+          deletegroup <- totcurstrains[deleters]
+          totcurstrains <- totcurstrains[-deleters]
         }
-      }
-      if (length(deleters)>0) {
-        for (i in sort(deleters, decreasing=T)) {
-          libr[[i]] <- NULL
-          mut.nuc[[i]] <- NULL
-        }
-        deletegroup <- totcurstrains[deleters]
-        totcurstrains <- totcurstrains[-deleters]
       }
       if (length(cur.sus)==0) {
         eff.cur.inf <- inf.ID[which(sample.times>time)]
@@ -297,11 +381,16 @@ function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000,
     if (tot.inf>mincases) {
       trigger <- TRUE
     } else {
-      cat("Insufficient number of infections!\n")
+      cat("Insufficient number of infections! (mincases=", mincases, ")\n", sep="")
     }
   }
-  
-  return(invisible(list(epidata=cbind(inf.ID, inf.times, rec.times, inf.source), 
-                        sampledata=cbind(sampleID, sampletimes, sampleWGS),
-                        libr=libr, nuc=mut.nuc, librstrains=totcurstrains, endtime=time)))
+  if (full) {
+    return(invisible(list(epidata=cbind(inf.ID, inf.times, rec.times, inf.source), 
+                          sampledata=cbind(pID, sampleID, sampletimes), obs.freq=obs.freq, obs.strain=obs.strain,
+                          libr=libr, nuc=mut.nuc, librstrains=totcurstrains, endtime=time)))
+  } else {
+    return(invisible(list(epidata=cbind(inf.ID, inf.times, rec.times, inf.source), 
+                          sampledata=cbind(sampleID, sampletimes, sampleWGS),
+                          libr=libr, nuc=mut.nuc, librstrains=totcurstrains, endtime=time)))
+  }
 }

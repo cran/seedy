@@ -9,9 +9,9 @@ function(eq.size, m.rate, runtime, iterations=10, n.points=100, genomelength=100
   
   for (i in 1:iterations) {
     cat("Iteration", i, "\n")
-    X <- simulatebacteria(eq.size=eq.size, m.rate=m.rate, runtime=runtime, init.freq=init.freq, 
+    X <- simulatepopulation(eq.size=eq.size, m.rate=m.rate, runtime=runtime, init.freq=init.freq, 
                           bottle.times=bottle.times, bottle.size=bottle.size,libr=libr, 
-                          nuc=nuc, genomelength=genomelength, deepseq=TRUE, fullrecords=TRUE, 
+                          nuc=nuc, genomelength=genomelength, full=TRUE, sample.times=1:runtime,
                           feedback=feedback)
     Y <- plotdiversity(X, s.times, makeplot=FALSE, filter=TRUE)
     diversity <- rbind(diversity, Y)

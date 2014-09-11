@@ -2,14 +2,14 @@
 \alias{librtoDNA}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Convert simulation objects to DNA sequences or Nexus files.
+  Convert simulation objects to DNA sequences or Nexus/Fasta files.
 }
 \description{
   Creates a character string or matrix of nucleotides (C, A, G, T), output to vector, matrix or Nexus file.
 }
 \usage{
 librtoDNA(sampleID, libr, nuc, ref.strain, key, sampletime=NULL, 
-          strings = FALSE, filename = NULL)
+          strings = FALSE, filename = NULL, format = "nexus")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -35,7 +35,10 @@ librtoDNA(sampleID, libr, nuc, ref.strain, key, sampletime=NULL,
   If \code{TRUE}, returns a character vector, each element containing one genotype. Otherwise, returns a (number of genotypes)x(length of genome) character matrix.
 }
   \item{filename}{
-  File to which sequence data should be written. Output format is Nexus. Not written out if \code{NULL}
+  File to which sequence data should be written. Output format is Nexus. Not written out if \code{NULL}.
+}
+  \item{format}{
+  File format to be exported (if \code{filename!=NULL}). Options are \code{"nexus"} and \code{"fasta"}.
 }
 }
 

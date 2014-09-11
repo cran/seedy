@@ -1,16 +1,41 @@
-simulatebacteria <-
+simulatepopulation <-
 function(eq.size, m.rate, runtime, sample.times, n.samples=1, genomelength=100000, 
-         bottle.times=0, bottle.size=1, fullrecords=FALSE, deepseq=FALSE, 
-         feedback=1000, init.freq=1, libr=NULL, nuc=NULL, ref.strain=NULL) {
+         bottle.times=0, bottle.size=1, full=FALSE, feedback=1000, init.freq=1, 
+         libr=NULL, nuc=NULL, ref.strain=NULL) {
+  
+  # WARNINGS 
+  
+  if (bottle.size%%1!=0 || bottle.size<1) {
+    stop("Bottleneck size must be a postive integer")
+  }
+  if (sum(sample.times%%1!=0)>0 || sum(sample.times<1)>0) {
+    stop("sample.times must be postive integers")
+  }
+  if (sum(bottle.times%%1!=0)>0 || sum(bottle.times<0)>0) {
+    stop("bottle.times must be non-negative integers")
+  }
+  if (feedback%%1!=0 || feedback<1) {
+    stop("feedback must be a postive integer")
+  }
+  if (genomelength%%1!=0 || genomelength<1) {
+    stop("Genome length must be a postive integer")
+  }
+  if (n.samples%%1!=0 || n.samples<1) {
+    stop("n.samples must be a postive integer")
+  }
+  if (m.rate<0 || m.rate>=1) {
+    stop("Mutation rate must be between 0 and 1")
+  }
+  if (eq.size%%1!=0 || eq.size<=0) {
+    stop("Equilibrium population size must be a postive integer")
+  }
+  
+  ###############################
   
   time <- 1 # in bacterial generations
   
   if (is.null(ref.strain)) {
     ref.strain <- sample(1:4, genomelength, replace=T) # reference strain
-  }
-  if (fullrecords) {
-    sample.times <- 1:runtime
-    deepseq <- TRUE
   }
   
   totcurstrains <- 1:length(init.freq) # strains present or recorded
@@ -24,21 +49,22 @@ function(eq.size, m.rate, runtime, sample.times, n.samples=1, genomelength=10000
     
     for (i in 1:uniquestrains) {
       if (i==1) {
-        libr[[i]] <- sample(genomelength,1) # Pick random location for mutation
-        mut.nuc[[i]] <- sample((1:4)[-ref.strain[libr[[i]]]], 1) # mutation type
+        libr[[1]] <- NA # Pick random location for mutation
+        mut.nuc[[1]] <- NA # mutation type
       } else {
         libr[[i]] <- c(libr[[i-1]], sample(genomelength, 1)) # Each additional strain is one SNP from previous
-        if (libr[[i]][i] %in% libr[[i-1]]) { # If choosing previously chosen locus
-          src <- which(libr[[i-1]]==libr[[i]][i])
+        if (libr[[i]][length(libr[[i]])] %in% libr[[i-1]]) { # If choosing previously chosen locus
+          src <- which(libr[[i-1]]==libr[[i]][length(libr[[i]])])[1]
           mut.nuc[[i]] <- c(mut.nuc[[i-1]], sample((1:4)[-mut.nuc[[i-1]][src]], 1)) # Choose different mutation
+        } else {
+          mut.nuc[[i]] <- c(mut.nuc[[i-1]], sample((1:4)[-ref.strain[libr[[i]][length(libr[[i]])]]], 1)) # don't choose same nucleotide as ref.strain
         }
-        mut.nuc[[i]] <- c(mut.nuc[[i-1]], sample((1:4)[-ref.strain[libr[[i]][i]]], 1)) # don't choose same nucleotide as ref.strain
       }
     }
   } else {
     mut.nuc <- nuc
   }
-  if (deepseq || fullrecords) {
+  if (full) {
     obs.freq <- list()
     obs.strain <- list()
   } else {
@@ -123,6 +149,10 @@ function(eq.size, m.rate, runtime, sample.times, n.samples=1, genomelength=10000
             libr[[length(totcurstrains)+1]] <- 
               c(libr[[which(totcurstrains==mutate.grp)]], mut.loc)
           }
+          if (sum(is.na(mut.nuc[[length(totcurstrains)+1]]))>0) {
+            mut.nuc[[length(totcurstrains)+1]] <- mut.nuc[[length(totcurstrains)+1]][-is.na(mut.nuc[[length(totcurstrains)+1]])]
+            libr[[length(totcurstrains)+1]] <- libr[[length(totcurstrains)+1]][-is.na(libr[[length(totcurstrains)+1]])]
+          }
           strain.log <- c(strain.log, types)
           freq.log <- c(freq.log, 1)
           totcurstrains <- c(totcurstrains, types)
@@ -131,7 +161,7 @@ function(eq.size, m.rate, runtime, sample.times, n.samples=1, genomelength=10000
     }
     # take samples, make observations
     if (time%in%sample.times) {
-      if (deepseq) {
+      if (full) {
         n <- length(obs.freq)+1
         obs.freq[[n]] <- freq.log
         obs.strain[[n]] <- strain.log
@@ -139,6 +169,7 @@ function(eq.size, m.rate, runtime, sample.times, n.samples=1, genomelength=10000
       } else {
         if (length(strain.log)==1) {
           obs.strain <- rep(strain.log, n.samples)
+          obs.time <- c(obs.time, rep(time, n.samples))
         } else {
           obs.strain <- c(obs.strain, sample(strain.log, n.samples, prob=freq.log, replace=TRUE))
           obs.time <- c(obs.time, rep(time, n.samples))
@@ -150,7 +181,7 @@ function(eq.size, m.rate, runtime, sample.times, n.samples=1, genomelength=10000
       strain.log = 0
       freq.log = 0
     }
-    if (!fullrecords) {
+    if (length(sample.times) < 100) {
       deleters <- NULL
 #       # clean up libr etc.
 #       deleters <- NULL
@@ -207,7 +238,7 @@ function(eq.size, m.rate, runtime, sample.times, n.samples=1, genomelength=10000
     }
     time <- time+1
   }
-  if (deepseq) {
+  if (full) {
     return(invisible(list(libr=libr, nuc=mut.nuc, librstrains=totcurstrains, obs.freq=obs.freq, obs.strain=obs.strain,
                           ref.strain=ref.strain)))
   } else {
