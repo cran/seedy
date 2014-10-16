@@ -18,8 +18,8 @@ function(sampleID, libr, nuc, ref.strain, key, sampletime=NULL, strings=FALSE,
   }
   for (i in 1:ngenomes) {
     K <- ref.strain
-    if (is.na(nuc[[which(key==sampleID[i])]][1])) {
-      K[libr[[which(key==sampleID[i])]] ] <- nuc[[which(key==sampleID[i])]]
+    if (!is.na(nuc[[which(key==sampleID[i])]][1])) {
+      K[ libr[[which(key==sampleID[i])]] ] <- nuc[[which(key==sampleID[i])]]
     }
     for (j in 1:length(ntides)) {
       K[which(K==j)] <- ntides[j]
@@ -47,9 +47,9 @@ function(sampleID, libr, nuc, ref.strain, key, sampletime=NULL, strings=FALSE,
         write(paste(">lcl|G1_", sampletime[1], sep=""), file=filename)
       }
       k <- 1
-      while ((k+49)<=length(ref.strain)) {
-        write(paste(DNAoutput[1,k:(k+49)], collapse=""), file=filename, append=TRUE)
-        k <- k+49
+      while (k<length(ref.strain)) {
+        write(paste(DNAoutput[1,k:min(length(ref.strain),(k+49))], collapse=""), file=filename, append=TRUE)
+        k <- k+50
       }
       if (ngenomes>1) {
         for (i in 2:ngenomes) {
@@ -59,9 +59,9 @@ function(sampleID, libr, nuc, ref.strain, key, sampletime=NULL, strings=FALSE,
             write(paste(">lcl|G", i, "_", sampletime[i], sep=""), file=filename, append=TRUE)
           }
           k <- 1
-          while ((k+49)<=length(ref.strain)) {
-            write(paste(DNAoutput[1,k:(k+49)], collapse=""), file=filename, append=TRUE)
-            k <- k+49
+          while (k<length(ref.strain)) {
+            write(paste(DNAoutput[i,k:min(length(ref.strain),(k+49))], collapse=""), file=filename, append=TRUE)
+            k <- k+50
           }
         }
       }
