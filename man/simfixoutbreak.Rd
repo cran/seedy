@@ -1,35 +1,31 @@
-\name{simulateoutbreak}
-\alias{simulateoutbreak}
+\name{simfixoutbreak}
+\alias{simfixoutbreak}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-	Simulate transmission and evolutionary dynamics
+  Simulate evolutionary dynamics on a given transmission tree
 }
 \description{
-	Simulate within-host evolutionary dynamics on top of an SIR transmission process and generate genomic samples.
+  Simulate within-host evolutionary dynamics on top of an existing transmission tree and generate genomic samples.
 }
 \usage{
-simulateoutbreak(init.sus, inf.rate, rem.rate, mut.rate, nmat = NULL, 
-                 equi.pop = 10000, shape=flat, init.inf = 1, inoc.size = 1, 
-                 samples.per.time = 1, samp.schedule = "random", 
-                 samp.freq = 500, full=FALSE, mincases = 1, 
-                 feedback = 500, glen = 1e+05, ref.strain = NULL, ...)
+simfixoutbreak(inf.times, rec.times, inf.source, mut.rate, equi.pop=10000, shape=flat,
+           inoc.size=1, imp.var=25, samples.per.time=1, samp.schedule="random", 
+           samp.freq=500, full=FALSE, feedback=500, glen=100000, 
+           ref.strain=NULL, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{init.sus}{
-	Initial number of susceptible individuals.
+  \item{inf.times}{
+	Vector of (integer) infection times.
 }
-  \item{inf.rate}{
-	SIR rate of infection.
+  \item{rec.times}{
+	Vector of (integer) removal times.
 }
-  \item{rem.rate}{
-	SIR rate of removal.
+  \item{inf.source}{
+	Vector of infection sources. The \code{i}th entry corresponds to the ID of the source of infection. For importations, the source should be 0.
 }
   \item{mut.rate}{
 	Mutation rate (per genome per generation).
-}
-  \item{nmat}{
-	Connectivity matrix. Entry [i,j] gives the relative rate at which person i may contact person j.
 }
   \item{equi.pop}{
 	Equilibrium effective population size of pathogens within-host.
@@ -37,11 +33,11 @@ simulateoutbreak(init.sus, inf.rate, rem.rate, mut.rate, nmat = NULL,
   \item{shape}{
   Function describing the population growth dynamics. See Details.
   }
-  \item{init.inf}{
-	Initial number of infected individuals.
-}
   \item{inoc.size}{
 	Size of pathogen inoculum at transmission.
+}
+  \item{imp.var}{
+  The expected number of mutations separating unconnected importations.
 }
   \item{samples.per.time}{
 	Number of samples taken at sampling times.
@@ -49,13 +45,10 @@ simulateoutbreak(init.sus, inf.rate, rem.rate, mut.rate, nmat = NULL,
   \item{samp.schedule}{
 	How should sampling be conducted? Accepted values are: "calendar" - samples are taken from all current infectives every \code{samp.freq} generations; "individual" - samples are taken from each infective at intervals of \code{samp.freq} after infection; "random" - samples are taken at one time between infection and removal for each infective.
 }
-  \item{samp.freq}{
-	Number of generations between each sampling time (see \code{samp.schedule}).
-}
   \item{full}{Should `full' genomic sampling be returned? That is, should a vector of genotypes and their respective frequencies be stored from each individual's sampling times?
 }
-  \item{mincases}{
-	Minimum final size of outbreak to output. If final size is less than this value, another outbreak is simulated.
+  \item{samp.freq}{
+  Number of generations between each sampling time (see \code{samp.schedule}).
 }
   \item{feedback}{
 	Number of generations between simulation updates returned to R interface.
@@ -85,9 +78,19 @@ Population growth dynamics are defined by the function called by 'shape'. This f
 
 \examples{
 
-W <- simulateoutbreak(init.sus=10, inf.rate=0.002, rem.rate=0.001, mut.rate=0.0001, 
-                      equi.pop=2000, inoc.size=1, samples.per.time=10, 
-                      samp.schedule="calendar", samp.freq=500, mincases=3) 
+# Simulate a transmission chain
+inf.times <- (0:20)*100
+rec.times <- inf.times + 100 + rpois(21,50)
+inf.source <- 0:20
+inf.source[c(3,11)] <- 0 # Two importations
+mut.rate <- 0.002
+
+# Now simulate evolutionary dynamics and samples on top of this tree
+W <- simfixoutbreak(inf.times, rec.times, inf.source, mut.rate, equi.pop=1000, shape=flat,
+                    inoc.size=10, imp.var=25, samples.per.time=5, samp.schedule="random", 
+                    samp.freq=500, full=FALSE, feedback=100, glen=100000, 
+                    ref.strain=NULL)
+
 sampledata <- W$sampledata
 epidata <- W$epidata
 
@@ -101,13 +104,14 @@ colv <- NULL # Vector of colors for samples
 maxD <- max(distmat[,refnode])
 
 for (i in 1:nrow(sampledata)) {
-  	colv <- c(colv, 
-              colvec[floor((length(colvec)-1)*(distmat[refnode,i])/maxD)+1])
+  colv <- c(colv, 
+            colvec[floor((length(colvec)-1)*(distmat[refnode,i])/maxD)+1])
 }
 
 
 plotoutbreak(epidata, sampledata, col=colv, stack=TRUE, arr.len=0.1, 
-             blockheight=0.5, hspace=500, label.pos="left", block.col="grey", 
+             blockheight=0.5, hspace=60, label.pos="left", block.col="grey", 
              jitter=0.004, xlab="Time", pch=1) 
+
 }
 

@@ -1,5 +1,5 @@
 diversity.range <-
-function(eq.size, m.rate, runtime, iterations=10, n.points=100, genomelength=100000, 
+function(m.rate, runtime, equi.pop, iterations=10, n.points=100, genomelength=100000, 
          bottle.times=0, bottle.size=1, feedback=1000, makeplot=TRUE, area=TRUE, colline="blue", colarea=rgb(0,0,1,0.4), 
          ref.strain=NULL, init.freq=1, libr=NULL, 
          nuc=NULL, ...) {
@@ -9,7 +9,7 @@ function(eq.size, m.rate, runtime, iterations=10, n.points=100, genomelength=100
   
   for (i in 1:iterations) {
     cat("Iteration", i, "\n")
-    X <- simulatepopulation(eq.size=eq.size, m.rate=m.rate, runtime=runtime, init.freq=init.freq, 
+    X <- simulatepopulation(m.rate=m.rate, runtime=runtime, equi.pop=equi.pop, init.freq=init.freq, 
                           bottle.times=bottle.times, bottle.size=bottle.size,libr=libr, 
                           nuc=nuc, genomelength=genomelength, full=TRUE, sample.times=1:runtime,
                           feedback=feedback)

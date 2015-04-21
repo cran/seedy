@@ -1,94 +1,75 @@
-simulateoutbreak <-
-function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000, shape=flat,
-         init.inf=1, inoc.size=1, samples.per.time=1, samp.schedule="random", 
-         samp.freq=500, full=FALSE, mincases=1, feedback=500, glen=100000, 
-         ref.strain=NULL, ...) {
-  
-  # WARNINGS
-  
-  if (init.sus%%1!=0 || init.sus<1) {
-    stop("Initial number of susceptibles must be a postive integer")
-  }
-  if (init.inf%%1!=0 || init.inf<1) {
-    stop("Initial number of susceptibles must be a postive integer")
-  }
-  if (inoc.size%%1!=0 || inoc.size<1) {
-    stop("Inoculum size must be a postive integer")
-  }
-  if (samp.freq%%1!=0 || samp.freq<1) {
-    stop("samp.freq must be a postive integer")
-  }
-  if (feedback%%1!=0 || feedback<1) {
-    stop("feedback must be a postive integer")
-  }
-  if (glen%%1!=0 || glen<1) {
-    stop("Genome length must be a postive integer")
-  }
-  if (mincases%%1!=0 || mincases<1 || mincases>init.sus+init.inf) {
-    stop("Minimum cases must be a postive integer not greater than init.sus+init.inf")
-  }
-  if (samples.per.time%%1!=0 || samples.per.time<1) {
-    stop("samples.per.time must be a postive integer")
-  }
-  if (inf.rate<=0) {
-    stop("Infection rate must be greater than zero")
-  }
-  if (rem.rate<=0) {
-    stop("Removal rate must be greater than zero")
-  }
-  if (mut.rate<0 || mut.rate>=1) {
-    stop("Mutation rate must be between 0 and 1")
-  }
-  if (!is.function(shape)) {
-    stop("'shape' must be a function")
-  } 
-  if (!is.null(nmat)) {
-    if (!is.matrix(nmat)) {
-      stop("nmat must be a matrix")
-    } else {
-      if (nrow(nmat)!=init.sus+init.inf || ncol(nmat)!=init.sus+init.inf) {
-        stop("nmat must have init.sus+init.inf rows and columns")
-      } else if (sum(nmat<0)>0) {
-        stop("All entries of nmat must be >= 0")
+simfixoutbreak <-
+  function(inf.times, rec.times, inf.source, mut.rate, equi.pop=10000, shape=flat,
+           inoc.size=1, imp.var=25, samples.per.time=1, samp.schedule="random", 
+           samp.freq=500, full=FALSE, feedback=500, glen=100000, 
+           ref.strain=NULL, ...) {
+    
+    # WARNINGS
+    
+    if (inoc.size%%1!=0 || inoc.size<1) {
+      stop("Inoculum size must be a postive integer")
+    }
+    if (samp.freq%%1!=0 || samp.freq<1) {
+      stop("samp.freq must be a postive integer")
+    }
+    if (feedback%%1!=0 || feedback<1) {
+      stop("feedback must be a postive integer")
+    }
+    if (glen%%1!=0 || glen<1) {
+      stop("Genome length must be a postive integer")
+    }
+    if (samples.per.time%%1!=0 || samples.per.time<1) {
+      stop("samples.per.time must be a postive integer")
+    }
+    if (length(inf.times)!=length(rec.times) || length(inf.times)!=length(inf.source)) {
+      stop("Infection times, recovery times, infection sources must be vectors of the sample length")
+    }
+    if (sum(inf.times>=rec.times)>0) {
+      stop("Infection times must be earlier than recovery times")
+    }
+    for (i in 1:length(inf.times)) {
+      if (inf.source[i]!=0) {
+        if (inf.times[inf.source[i]]>=inf.times[i]) {
+          stop(paste("Source's infection time after recipient's, p", i, sep=""))
+        } else if (rec.times[inf.source[i]]<=inf.times[i]) {
+          stop(paste("Source's recovery time earlier than recipient's infection time, p", i, sep=""))
+        }
       }
     }
-  }
-  if (equi.pop%%1!=0 || equi.pop<=0) {
-    stop("Equilibrium population size must be a postive integer")
-  }
-  if (!samp.schedule%in%c("random", "calendar", "individual")) {
-    stop("samp.schedule must be 'random', 'calendar', or 'individual'")
-  }
-  
-  #########################
-  
-  cat("\nSimulating outbreak:\n")
-  cat("N=",equi.pop, ", b=", inoc.size, ", beta=", inf.rate, 
-      ", gamma=", rem.rate, ", mu=", mut.rate, "\n\n", sep="")
-  trigger <- FALSE
-  
-  at <- 0
-  while (!trigger) { # Repeat if < mincases are infected
+    if (mut.rate<0 || mut.rate>=1) {
+      stop("Mutation rate must be between 0 and 1")
+    }
+    if (!is.function(shape)) {
+      stop("'shape' must be a function")
+    } 
+    if (equi.pop%%1!=0 || equi.pop<=0) {
+      stop("Equilibrium population size must be a postive integer")
+    }
+    if (!samp.schedule%in%c("random", "calendar", "individual")) {
+      stop("samp.schedule must be 'random', 'calendar', or 'individual'")
+    }
+    
+    #########################
+    
+    cat("\nSimulating genomic data:\n")
+    
+    time <- min(inf.times) # in bacterial generations
     newinfect <- 0
-    at <- at+1
-    cat("Attempt ", at, "\n", sep="")
     eff.cur.inf <- NULL
+    init.inf <- sum(inf.times==min(inf.times))
+    init.sus <- length(inf.times)-init.inf
     cur.inf <- 1:init.inf # vector of infected person IDs
     cur.sus <- init.inf+(1:init.sus) # vector of susceptible person IDs
-    time <- 0 # in bacterial generations
-    inf.times <- rep(0,init.inf) # vector of infection times
-    rec.times <- rgeom(init.inf,rem.rate)+2 # vector of removal times
     tot.inf <- init.inf
-    inf.ID <- 1:init.inf
+    inf.ID <- which(inf.times==min(inf.times))
     if (samp.schedule=="random") {
-      sample.times <- NULL
-      for (i in 1:init.inf) {
-        sample.times <- c(sample.times, sample(1:(rec.times[i]-1),1)) # vector of sampling times
+      sample.times <- numeric(init.inf)
+      for (j in 1:inf.ID) {
+        sample.times[j] <- sample(1:(rec.times[inf.ID[j]]-1),init.inf, replace=TRUE) # vector of sampling times
       }
     } else {
       sample.times <- rep(samp.freq, init.inf)
     }
-    inf.source <- rep(0,init.inf) # source of infection for each individual
     if (is.null(ref.strain)) {
       ref.strain <- sample(1:4, glen, replace=T) # reference strain
     } else {
@@ -104,27 +85,33 @@ function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000, shap
     
     # Initialize logs
     for (i in 1:init.inf) {
-      if (sample.times[i]>rec.times[i]) {
+      if (sample.times[i]>rec.times[inf.ID[i]]) {
         sample.times[i] <- Inf
       }
       if (i == 1) {
         libr[[i]] <- NA
         mut.nuc[[i]] <- NA      
       } else {
-        libr[[i]] <- sample(glen,1)
-        mut.nuc[[i]] <- sample((1:4)[-ref.strain[libr[[i]]]], 1)
+        nmuts <- rpois(1,imp.var)
+        if (nmuts>0) {
+          libr[[i]] <- sample(glen,nmuts)
+          mut.nuc[[i]] <- numeric(nmuts)
+          for (j in 1:nmuts) {
+            mut.nuc[[i]][j] <- sample((1:4)[-ref.strain[libr[[i]][j]]], 1)
+          }
+        }   
       }
-      freq.log[[i]] <- 1
-      strain.log[[i]] <- 1
+      freq.log[[inf.ID[i]]] <- 1
+      strain.log[[inf.ID[i]]] <- i
     }
     
-    for (i in (init.inf+1):(init.sus+init.inf)) {
+    for (i in (1:length(inf.times))[-inf.ID]) {
       freq.log[[i]] <- 0
       strain.log[[i]] <- 0
     }
     
     current.infected <- init.inf
-    types <- 1 # Cumulative number of strain types
+    types <- init.inf # Cumulative number of strain types
     
     #Sample logs
     if (full) {
@@ -139,7 +126,7 @@ function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000, shap
     sampletimes <- NULL
     sampleID <- NULL
     
-    while (length(cur.inf) > 0) { # Cycle through bacterial generations until epidemic ceases
+    while (time <= max(rec.times)) { # Cycle through bacterial generations until epidemic ceases
       time <- time+1
       if (time%in%rec.times) { # recovery?
         recover <- inf.ID[which(rec.times==time)] # who has recovered?
@@ -163,92 +150,72 @@ function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000, shap
           cat(", final removal time=", max(rec.times), "\n", sep="")
         }
       }
-      # calculate force of infection
       
-      if (is.null(nmat)) {
-        curinfrate <- inf.rate*length(cur.inf)*length(cur.sus)/(init.inf+init.sus)
-      } else {
-        inf.mat <- nmat*inf.rate/(init.inf+init.sus)
-        curinfrate <- sum(inf.mat[cur.sus,cur.inf])
-      }
-      
-      if (runif(1,0,1) < curinfrate) { # infection?
-        tot.inf <- tot.inf+1
-        # who got infected? and by whom?
-        if (is.null(nmat)) {
-          if (length(cur.sus)>1) {
-            newinfect <- sample(cur.sus, 1)
-          } else {
-            newinfect <- cur.sus
-          }
-          
-          if (length(cur.inf)==1) {
-            inf.source <- c(inf.source, cur.inf)
-          } else {
-            inf.source <- c(inf.source, sample(cur.inf,1)) # sample source at random
-          }
-          
-        } else {
-          if (length(cur.sus)>1) {
-            if (length(cur.inf)==1) {
-              prbs <- inf.mat[,cur.inf]
-            } else {
-              prbs <- apply(inf.mat[,cur.inf],1,sum)
-            }
-            newinfect <- sample(cur.sus, 1, prob=prbs[cur.sus])
-          } else {
-            newinfect <- cur.sus
-          }
-          
-          if (length(cur.inf)==1) {
-            inf.source <- c(inf.source, cur.inf)
-          } else {
-            inf.source <- c(inf.source, sample(cur.inf, 1, prob=inf.mat[newinfect,cur.inf]))
-          }
-          
-        }
+      if (time %in% inf.times) { # infection?
+        infnow <- which(inf.times==time)
+        for (k in 1:length(infnow)) {
+          newinfect <- infnow[k]
+          tot.inf <- tot.inf+1
         
-        inf.ID <- c(inf.ID, newinfect)
-        cur.inf <- c(cur.inf, newinfect) # add to current infectives
-        cur.sus <- cur.sus[-which(cur.sus==newinfect)] # Remove susceptible
-        inf.times <- c(inf.times, time) # new infection time
-        rec.times <- c(rec.times, time+max(1,rgeom(1,rem.rate))) # Don't recover today!
-        if (samp.schedule == "individual") {
-          sample.times <- c(sample.times, time+samp.freq)
-        } else if (samp.schedule == "calendar") {
-          sample.times <- c(sample.times, ceiling(time/samp.freq)*samp.freq)
-        } else if (samp.schedule == "random") {
-          if (rec.times[tot.inf]>time+1) {
-            sample.times <- c(sample.times, sample(time:(rec.times[tot.inf]-1),1))
+          inf.ID <- c(inf.ID, newinfect)
+          cur.inf <- c(cur.inf, newinfect) # add to current infectives
+          cur.sus <- cur.sus[-which(cur.sus==newinfect)] # Remove susceptible
+          ###############
+          if (samp.schedule == "individual") {
+            sample.times <- c(sample.times, time+samp.freq)
+          } else if (samp.schedule == "calendar") {
+            sample.times <- c(sample.times, ceiling(time/samp.freq)*samp.freq)
+          } else if (samp.schedule == "random") {
+            if (rec.times[newinfect]>time+1) {
+              sample.times <- c(sample.times, sample(time:(rec.times[newinfect]-1),1))
+            } else {
+              sample.times <- c(sample.times, time)
+            }
+          }
+          if (sample.times[newinfect]>=rec.times[newinfect]) {
+            sample.times[newinfect] <- Inf
+          }
+          # pass on strain
+          if (inf.source[newinfect]==0) {
+            nmuts <- rpois(1,imp.var)
+            if (nmuts>0) {
+              types <- types+1
+              totcurstrains <- c(totcurstrains, types)
+              libr[[length(totcurstrains)]] <- sample(glen,nmuts)
+              mut.nuc[[length(totcurstrains)]] <- numeric(nmuts)
+              for (j in 1:nmuts) {
+                mut.nuc[[length(totcurstrains)]][j] <- sample((1:4)[-ref.strain[libr[[length(totcurstrains)]][j]]], 1)
+              }
+              strain.log[[newinfect]] <- types
+              freq.log[[newinfect]] <- 1
+            } else {
+              strain.log[[newinfect]] <- 1
+              freq.log[[newinfect]] <- 1
+            }
           } else {
-            sample.times <- c(sample.times, time)
+            src <- inf.ID[which(inf.ID==inf.source[newinfect])] # Source of infection
+            if (length(strain.log[[src]])==1) { # if source has clonal infection
+              inoc.samp <- rep(strain.log[[src]], inoc.size)
+              if (0%in%inoc.samp) {
+                stop("Zeroes in inoculum")
+              }
+            } else {
+              inoc.samp <- sample(strain.log[[src]], inoc.size, 
+                                  prob=freq.log[[src]], replace=T) # take random sample
+              if (0%in%inoc.samp) {
+                stop("Zeroes in inoculum")
+              }
+            }
+            strain.log[[newinfect]] <- unique(inoc.samp) # distinct types in new infection
+            f <- numeric(length(unique(inoc.samp)))
+            w <- 1
+            for (i in unique(inoc.samp)) {
+              f[w] <- sum(inoc.samp==i)
+              w <- w+1
+            }
+            freq.log[[newinfect]] <- f # frequency of types
           }
         }
-        if (sample.times[tot.inf]>=rec.times[tot.inf]) {
-          sample.times[tot.inf] <- Inf
-        }
-        # pass on strain
-        src <- inf.ID[which(inf.ID==inf.source[tot.inf])] # Source of infection
-        if (length(strain.log[[src]])==1) { # if source has clonal infection
-          inoc.samp <- rep(strain.log[[src]], inoc.size)
-          if (0%in%inoc.samp) {
-            stop("Zeroes in inoculum")
-          }
-        } else {
-          inoc.samp <- sample(strain.log[[src]], inoc.size, 
-                              prob=freq.log[[src]], replace=T) # take random sample
-          if (0%in%inoc.samp) {
-            stop("Zeroes in inoculum")
-          }
-        }
-        strain.log[[newinfect]] <- unique(inoc.samp) # distinct types in new infection
-        f <- numeric(length(unique(inoc.samp)))
-        k <- 1
-        for (i in unique(inoc.samp)) {
-          f[k] <- sum(inoc.samp==i)
-          k <- k+1
-        }
-        freq.log[[newinfect]] <- f # frequency of types
       }
       # mutate existing strains for each individual
       if (is.null(eff.cur.inf)) {
@@ -258,7 +225,9 @@ function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000, shap
       }
       for (i in cinf) {
         pop.size <- sum(freq.log[[i]])
-        death.prob <- min(0.5 + 0.5*(pop.size-shape(time,span=rec.times[i]-inf.times[i]+1,equi.pop,...))/shape(time,span=rec.times[i]-inf.times[i]+1,equi.pop,...),1)
+        #death.prob <- min(0.5 + 0.5*(pop.size-shape(time,span=rec.times[i]-inf.times[i]+1,equi.pop,...))/shape(time,span=rec.times[i]-inf.times[i]+1,equi.pop,...),1)
+        death.prob <- min(0.5 + 0.5*(pop.size-shape(time,span=rec.times[i]-inf.times[i]+1,equi.pop))/shape(time,span=rec.times[i]-inf.times[i]+1,equi.pop),1)
+        
         if (length(freq.log)==0 || sum(is.na(freq.log))>0 || death.prob>1 || death.prob<0) {
           cat("deathprob=", death.prob, "\npop.size=", pop.size, "\nequi.pop=", equi.pop, "\nFreq.log:\n")
           if (length(freq.log)>0) {
@@ -380,23 +349,16 @@ function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000, shap
       if (length(cur.sus)==0) {
         eff.cur.inf <- inf.ID[which(sample.times>time)]
       }
-      if (length(cur.sus)==0 && sum(sample.times>time)==0) {
-        break
-      }
     }
-    if (tot.inf>mincases) {
-      trigger <- TRUE
+
+    if (full) {
+      return(invisible(list(epidata=cbind(inf.ID, inf.times, rec.times, inf.source), 
+                            sampledata=cbind(pID, sampleID, sampletimes), obs.freq=obs.freq, obs.strain=obs.strain,
+                            libr=libr, nuc=mut.nuc, librstrains=totcurstrains, endtime=time)))
     } else {
-      cat("Insufficient number of infections! (mincases=", mincases, ")\n", sep="")
+      return(invisible(list(epidata=cbind(inf.ID, inf.times, rec.times, inf.source), 
+                            sampledata=cbind(sampleID, sampletimes, sampleWGS),
+                            libr=libr, nuc=mut.nuc, librstrains=totcurstrains, endtime=time)))
     }
   }
-  if (full) {
-    return(invisible(list(epidata=cbind(inf.ID, inf.times, rec.times, inf.source), 
-                          sampledata=cbind(pID, sampleID, sampletimes), obs.freq=obs.freq, obs.strain=obs.strain,
-                          libr=libr, nuc=mut.nuc, librstrains=totcurstrains, endtime=time)))
-  } else {
-    return(invisible(list(epidata=cbind(inf.ID, inf.times, rec.times, inf.source), 
-                          sampledata=cbind(sampleID, sampletimes, sampleWGS),
-                          libr=libr, nuc=mut.nuc, librstrains=totcurstrains, endtime=time)))
-  }
-}
+

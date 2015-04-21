@@ -36,7 +36,8 @@ transroutes <- function(ID, GD, sample.times, inf.times, rec.times=NULL, mut.rat
         cuml <- sum(expsnps(x=0:distance, m.rate=mut.rate, c.rate=1/coaltime, 
                             tau=abs(sample.times[i]-sample.times[j])))
         
-        if (cuml<(1-p.level) || (1-(cuml-lh) > p.level && distance!=0)) {
+        #if (cuml<(1-p.level) || (1-(cuml-lh) > p.level && distance!=0)) {
+        if (cuml-lh > p.level && distance!=0) {
           reject[i,j] <- 1
         }
         

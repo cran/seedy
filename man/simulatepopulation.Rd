@@ -8,20 +8,20 @@ Simulate a pathogen population
 Simulates a pathogen population undergoing a Wright-Fisher discrete-time evolutionary process.
 }
 \usage{
-simulatepopulation(eq.size, m.rate, runtime, sample.times, n.samples=1, 
-genomelength=100000, bottle.times=0, bottle.size=1, full=FALSE, 
-feedback=1000, init.freq=1, libr=NULL, nuc=NULL, ref.strain=NULL)
+simulatepopulation(m.rate, runtime, equi.pop, sample.times, n.samples=1, 
+genomelength=100000, shape=flat, bottle.times=0, bottle.size=1, full=FALSE, 
+feedback=1000, init.freq=1, libr=NULL, nuc=NULL, ref.strain=NULL, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{eq.size}{
-	Equilibrium effective population size.
-}
   \item{m.rate}{
 	Mutation rate (per sequence per generation).
 }
   \item{runtime}{
 	Number of generations for simulation to run.
+}
+  \item{equi.pop}{
+  Equilibrium effective population size of pathogens within-host.
 }
   \item{sample.times}{
 	Vector of times at which to sample population.
@@ -32,6 +32,9 @@ feedback=1000, init.freq=1, libr=NULL, nuc=NULL, ref.strain=NULL)
   \item{genomelength}{
 	Length of genome.
 }
+  \item{shape}{
+  Function describing the population growth dynamics. See Details.
+  }
   \item{bottle.times}{
 	Vector of population bottleneck times.
 }
@@ -56,9 +59,14 @@ feedback=1000, init.freq=1, libr=NULL, nuc=NULL, ref.strain=NULL)
   \item{ref.strain}{
 	Reference strain. By default, this is randomly generated.
 }
+  \item{...}{
+  Additional arguments to be passed to the \code{shape} function.
+}
+
 }
 \details{
 	Simulation of a bacterial population. Population is by default initially clonal, and initiated by a single genotype. Population is prevented from extinction at all times. Population can be passed through repeated bottlenecks using the arguments \code{bottle.times} and \code{bottle.size}.
+Population growth dynamics are defined by the function called by 'shape'. This function returns the expected population size at each time step, given the total simulation time. By default, the population is expected to grow exponentially until reaching an equilibrium level, specified by \code{equi.pop} (\code{\link{flat}}). Alternatively, the population can follow a sinusoidal growth curve, peaking at \code{runtime}/2 (\code{\link{hump}}). User-defined functions should be of the form \code{function(time,span,equi.pop,...)}, where \code{span} is equal to \code{runtime} in this setting.
 }
 \value{
 	Returns a list of sampling data;
@@ -73,14 +81,13 @@ feedback=1000, init.freq=1, libr=NULL, nuc=NULL, ref.strain=NULL)
 
 \examples{
 # Generate 5 genome samples at 5 time points
-X <- simulatepopulation(eq.size=2000, m.rate=0.0005, runtime=10000, 
+X <- simulatepopulation(m.rate=0.0005, runtime=10000, equi.pop=2000,
                       sample.times=(1:5)*2000, n.samples=5, 
                       genomelength=10000, full=FALSE)
 	
 # Generate complete observations at 5 time points
-X <- simulatepopulation(eq.size=2000, m.rate=0.0005, runtime=10000, 
+X <- simulatepopulation( m.rate=0.0005, runtime=10000, equi.pop=2000,
                       sample.times=(1:5)*2000, genomelength=10000, 
                       bottle.times=5000, bottle.size=1, full=TRUE)
-
 }
 

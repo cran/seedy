@@ -8,21 +8,21 @@ Range of genetic diversity over time
 Generates multiple populations stochastically from an identical source, and measures the resulting diversity over time in each.
 }
 \usage{
-diversity.range(eq.size, m.rate, runtime, iterations = 10, n.points = 100, 
+diversity.range(m.rate, runtime, equi.pop, iterations = 10, n.points = 100, 
 genomelength = 1e+05, bottle.times=0, bottle.size=1, feedback = 1000, 
 makeplot = TRUE, area = TRUE, colline = "blue", colarea = rgb(0, 0, 1, 0.4), 
 ref.strain = NULL, init.freq = 1, libr=NULL, nuc=NULL, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{eq.size}{
-  Equilibrium effective population size.
-}
   \item{m.rate}{
   Mutation rate (per genome per generation).
 }
   \item{runtime}{
   Number of bacterial generations over which to simulate.
+}
+  \item{equi.pop}{
+  Equilibrium effective population size.
 }
   \item{iterations}{
   Number of populations to simulate.
@@ -83,7 +83,7 @@ A \code{iterations} by \code{n.points} matrix with diversity over time for each 
 }
 \examples{
 iterations <- 10
-K <- diversity.range(eq.size=1000, m.rate=0.0005, runtime=1000, 
+K <- diversity.range(m.rate=0.0005, runtime=1000, equi.pop=1000,
 iterations=iterations, n.points=100, genomelength=100000, feedback=100, 
 makeplot=TRUE, area=TRUE, colline="blue", colarea=rgb(0,0,1,0.4))
 }

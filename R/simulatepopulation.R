@@ -1,7 +1,7 @@
 simulatepopulation <-
-function(eq.size, m.rate, runtime, sample.times, n.samples=1, genomelength=100000, 
+function(m.rate, runtime, equi.pop, sample.times, n.samples=1, genomelength=100000, shape=flat, 
          bottle.times=0, bottle.size=1, full=FALSE, feedback=1000, init.freq=1, 
-         libr=NULL, nuc=NULL, ref.strain=NULL) {
+         libr=NULL, nuc=NULL, ref.strain=NULL, ...) {
   
   # WARNINGS 
   
@@ -26,14 +26,16 @@ function(eq.size, m.rate, runtime, sample.times, n.samples=1, genomelength=10000
   if (m.rate<0 || m.rate>=1) {
     stop("Mutation rate must be between 0 and 1")
   }
-  if (eq.size%%1!=0 || eq.size<=0) {
+  if (!is.function(shape)) {
+    stop("'shape' must be a function")
+  } 
+  if (equi.pop%%1!=0 || equi.pop<=0) {
     stop("Equilibrium population size must be a postive integer")
   }
-  
   ###############################
   
   time <- 1 # in bacterial generations
-  
+  popvec <- numeric(runtime)
   if (is.null(ref.strain)) {
     ref.strain <- sample(1:4, genomelength, replace=T) # reference strain
   }
@@ -103,15 +105,16 @@ function(eq.size, m.rate, runtime, sample.times, n.samples=1, genomelength=10000
     }
     # mutate existing strains for each individual
     pop.size <- sum(freq.log)
-    death.prob <- 0.5 + 0.5*(pop.size-eq.size)/eq.size
+    death.prob <- min(0.5 + 0.5*(pop.size-shape(time,span=runtime,equi.pop,...))/shape(time,span=runtime,equi.pop,...),1)
     if (length(freq.log)==0 || sum(is.na(freq.log))>0 || death.prob>1 || death.prob<0) {
-      cat("deathprob=", death.prob, "\npop.size=", pop.size, "\nequi.pop=", eq.size, "generation:", time, "\nFreq.log:\n")
+      cat("deathprob=", death.prob, "\npop.size=", pop.size, "\ngeneration:", time, "\nFreq.log:\n")
       if (length(freq.log)>0) {
         for (k in 1:length(freq.log)) {
           cat(freq.log[[i]][k], "\n")
         }
       }
     }
+    popvec[time] <- pop.size
     freq.log <- 2*rbinom(length(freq.log), freq.log, 1-death.prob)
     if (length(freq.log)==0 || sum(freq.log)==0) {
       freq.log <- 1
@@ -240,10 +243,10 @@ function(eq.size, m.rate, runtime, sample.times, n.samples=1, genomelength=10000
   }
   if (full) {
     return(invisible(list(libr=libr, nuc=mut.nuc, librstrains=totcurstrains, obs.freq=obs.freq, obs.strain=obs.strain,
-                          ref.strain=ref.strain)))
+                          popvec=popvec)))
   } else {
     return(invisible(list(libr=libr, nuc=mut.nuc, librstrains=totcurstrains, obs.strain=obs.strain, obs.time=obs.time, 
-                          ref.strain=ref.strain)))    
+                          popvec=popvec)))    
   }
 }
 

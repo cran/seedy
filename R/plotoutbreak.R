@@ -37,7 +37,11 @@ function(epidata, sampledata, col="red", stack=TRUE, arr.len=0.1, blockheight=0.
         }
       }
       possrows <- c(possrows, max(row, na.rm=TRUE)+1, min(row, na.rm=TRUE)-1)
-      rowdist <- abs(possrows-row[which(IDvec==inf.source[i])])
+      if (inf.source[i]==0) {
+        rowdist <- abs(possrows)
+      } else {
+        rowdist <- abs(possrows-row[which(IDvec==inf.source[i])])
+      }
       K <- which(rowdist==min(rowdist))
       if (length(K)>1) {
         K <- K[-which(K>max(row, na.rm=TRUE))]
