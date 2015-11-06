@@ -1,1 +1,6 @@
 exportPattern("^[[:alpha:]]+")
+importFrom("grDevices", "rgb")
+importFrom("graphics", "abline", "arrows", "axis", "lines", "mtext",
+             "plot", "points", "polygon", "rect", "text")
+importFrom("stats", "dgeom", "dpois", "quantile", "rbinom", "rgeom",
+             "rnorm", "rpois", "runif")

@@ -8,13 +8,16 @@
   Simulate within-host evolutionary dynamics on top of an existing transmission tree and generate genomic samples.
 }
 \usage{
-simfixoutbreak(inf.times, rec.times, inf.source, mut.rate, equi.pop=10000, shape=flat,
+simfixoutbreak(ID,inf.times, rec.times, inf.source, mut.rate, equi.pop=10000, shape=flat,
            inoc.size=1, imp.var=25, samples.per.time=1, samp.schedule="random", 
            samp.freq=500, full=FALSE, feedback=500, glen=100000, 
            ref.strain=NULL, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
+  \item{ID}{
+	Vector of unique IDs.
+}
   \item{inf.times}{
 	Vector of (integer) infection times.
 }
@@ -83,10 +86,10 @@ inf.times <- (0:20)*100
 rec.times <- inf.times + 100 + rpois(21,50)
 inf.source <- 0:20
 inf.source[c(3,11)] <- 0 # Two importations
-mut.rate <- 0.002
+mut.rate <- 0.001
 
 # Now simulate evolutionary dynamics and samples on top of this tree
-W <- simfixoutbreak(inf.times, rec.times, inf.source, mut.rate, equi.pop=1000, shape=flat,
+W <- simfixoutbreak(ID=1:21, inf.times, rec.times, inf.source, mut.rate, equi.pop=1000, shape=flat,
                     inoc.size=10, imp.var=25, samples.per.time=5, samp.schedule="random", 
                     samp.freq=500, full=FALSE, feedback=100, glen=100000, 
                     ref.strain=NULL)

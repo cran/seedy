@@ -1,13 +1,13 @@
 Package: seedy
 Type: Package
 Title: Simulation of Evolutionary and Epidemiological Dynamics
-Version: 1.2
-Date: 2015-04-21
+Version: 1.3
+Date: 2015-11-06
 Author: Colin Worby
 Maintainer: Colin Worby <cworby@hsph.harvard.edu>
 Description: Suite of functions for the simulation, visualisation and analysis of bacterial evolution within- and between-host.
 License: GPL-3
 NeedsCompilation: no
-Packaged: 2015-04-21 21:32:17 UTC; cworby
+Packaged: 2015-11-06 18:54:18 UTC; cworby
 Repository: CRAN
-Date/Publication: 2015-04-22 08:13:32
+Date/Publication: 2015-11-06 23:58:19

@@ -1,6 +1,7 @@
-1abea61920dfd11f8203ceff2c074ea2 *DESCRIPTION
-8b54e5a89fbda3af5e077053d40bec76 *NAMESPACE
+1d93243fc1d50aab83dbe8a99ebe9246 *DESCRIPTION
+1524ea4b8a40ea5f16e7a196ac355392 *NAMESPACE
 245daacd930a3e8f453063892e3dbeb9 *R/ancestors.R
+745d7dbb2b2b8a4b68f0b52c87ba9623 *R/deepseqmat.r
 cf2a420ee3428e8e9aa8ce418a6b825f *R/diversity.range.R
 95a5dff6289c0c132b6fa6cbb91f19de *R/estcoaltime.R
 9d1bb71af7d20bd5e007ca16967752a1 *R/expsnps.R
@@ -16,8 +17,9 @@ b38b9912e70c10bc8a4cf0c31fb86939 *R/meansnps.R
 214644fe83d6f87275c568b3da6599e2 *R/plotobservedsnps.R
 0e5776ec2e557da55260249b96f6546e *R/plotoutbreak.R
 69fc1f6721872364634d1bec7e408d83 *R/plotsnpfreq.r
-881dc49a381253cff29dbde1c41291d0 *R/simfixoutbreak.r
-35d99546eae91ab8ac52c92919460e96 *R/simulateoutbreak.R
+daad40ff1284306cd4879ce6995325c7 *R/sharedvariants.r
+7f6a56008be8b4566acf15be62f63b52 *R/simfixoutbreak.r
+605a9664074acb9e9dae26f0b65c6f43 *R/simulateoutbreak.R
 7fd1587cdac7f812c9401a610dcf3960 *R/simulatepopulation.R
 674b272118848893650f2646c6afb6fa *R/transroutes.r
 a5c4b60c4a41cfba69925be2ebb43a0c *data/deepseq.rda
@@ -26,6 +28,7 @@ ab524124c178828bc85ed68d6d56dc9f *data/transmission.rda
 6d4fa065ed1a3e18b8c4f52a8dbf26bd *data/withinhost.rda
 8d83b67c8f731235a0e22e35d29f71ba *man/ancestors.Rd
 787f63fa4557df0d84350cc344d0a5c0 *man/deepseq.Rd
+e6c1bc1005e70e08888927e9a48d475e *man/deepseqmat.Rd
 5929b1d9d2aae730a1e3ccacf3ef437b *man/diversity.range.Rd
 50fcf06355d5a326d3739dfab56bc63d *man/estcoaltime.Rd
 90853526fc2afc6acc449b2fd2aef5fe *man/expsnps.Rd
@@ -42,8 +45,9 @@ b92d250297ecddf9066198bcb70be5b2 *man/plotdistmat.Rd
 96d2724db318b0d2724f871205975619 *man/plotobservedsnps.Rd
 85606dcfcd55b20128071004a38ebe14 *man/plotoutbreak.Rd
 1566be14d863d55770bcc656c3c1519e *man/plotsnpfreq.Rd
-6f87da417954fbc974a80b945b616482 *man/seedy-package.Rd
-9483372a71b531fd30e23fc80f184b82 *man/simfixoutbreak.Rd
+285812d2733b727ce5f4b4fda4c9f3c4 *man/seedy-package.Rd
+b06c5b52e475f7ec02cda276965d6de5 *man/sharedvariants.Rd
+84529318033419717e2ec7841f6d9e14 *man/simfixoutbreak.Rd
 bb67fc0e7d3e9867f7a935bf94eab7cb *man/simulateoutbreak.Rd
 1f81d698ddf61b71f0a5892009c2e78e *man/simulatepopulation.Rd
 c607bcbd793705807625cb06a19df3c9 *man/transmission.Rd

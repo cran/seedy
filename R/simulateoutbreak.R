@@ -166,90 +166,77 @@ function(init.sus, inf.rate, rem.rate, mut.rate, nmat=NULL, equi.pop=10000, shap
       # calculate force of infection
       
       if (is.null(nmat)) {
-        curinfrate <- inf.rate*length(cur.inf)*length(cur.sus)/(init.inf+init.sus)
+        curinfrate <- inf.rate*length(cur.inf)/(init.inf+init.sus)
+        pinf <- rbinom(length(cur.sus),1,curinfrate)
       } else {
         inf.mat <- nmat*inf.rate/(init.inf+init.sus)
-        curinfrate <- sum(inf.mat[cur.sus,cur.inf])
+        if (length(cur.inf)>1) {
+        	curinfrate <- apply(inf.mat[cur.sus,cur.inf],1,sum)
+        } else {
+        	curinfrate <- inf.mat[cur.sus,]
+        }
+        pinf <- rbinom(length(cur.sus),1,curinfrate)
       }
       
-      if (runif(1,0,1) < curinfrate) { # infection?
-        tot.inf <- tot.inf+1
-        # who got infected? and by whom?
-        if (is.null(nmat)) {
-          if (length(cur.sus)>1) {
-            newinfect <- sample(cur.sus, 1)
-          } else {
-            newinfect <- cur.sus
-          }
-          
-          if (length(cur.inf)==1) {
-            inf.source <- c(inf.source, cur.inf)
-          } else {
-            inf.source <- c(inf.source, sample(cur.inf,1)) # sample source at random
-          }
-          
-        } else {
-          if (length(cur.sus)>1) {
-            if (length(cur.inf)==1) {
-              prbs <- inf.mat[,cur.inf]
-            } else {
-              prbs <- apply(inf.mat[,cur.inf],1,sum)
-            }
-            newinfect <- sample(cur.sus, 1, prob=prbs[cur.sus])
-          } else {
-            newinfect <- cur.sus
-          }
-          
-          if (length(cur.inf)==1) {
-            inf.source <- c(inf.source, cur.inf)
-          } else {
-            inf.source <- c(inf.source, sample(cur.inf, 1, prob=inf.mat[newinfect,cur.inf]))
-          }
-          
-        }
-        
-        inf.ID <- c(inf.ID, newinfect)
-        cur.inf <- c(cur.inf, newinfect) # add to current infectives
-        cur.sus <- cur.sus[-which(cur.sus==newinfect)] # Remove susceptible
-        inf.times <- c(inf.times, time) # new infection time
-        rec.times <- c(rec.times, time+max(1,rgeom(1,rem.rate))) # Don't recover today!
-        if (samp.schedule == "individual") {
-          sample.times <- c(sample.times, time+samp.freq)
-        } else if (samp.schedule == "calendar") {
-          sample.times <- c(sample.times, ceiling(time/samp.freq)*samp.freq)
-        } else if (samp.schedule == "random") {
-          if (rec.times[tot.inf]>time+1) {
-            sample.times <- c(sample.times, sample(time:(rec.times[tot.inf]-1),1))
-          } else {
-            sample.times <- c(sample.times, time)
-          }
-        }
-        if (sample.times[tot.inf]>=rec.times[tot.inf]) {
-          sample.times[tot.inf] <- Inf
-        }
-        # pass on strain
-        src <- inf.ID[which(inf.ID==inf.source[tot.inf])] # Source of infection
-        if (length(strain.log[[src]])==1) { # if source has clonal infection
-          inoc.samp <- rep(strain.log[[src]], inoc.size)
-          if (0%in%inoc.samp) {
-            stop("Zeroes in inoculum")
-          }
-        } else {
-          inoc.samp <- sample(strain.log[[src]], inoc.size, 
-                              prob=freq.log[[src]], replace=T) # take random sample
-          if (0%in%inoc.samp) {
-            stop("Zeroes in inoculum")
-          }
-        }
-        strain.log[[newinfect]] <- unique(inoc.samp) # distinct types in new infection
-        f <- numeric(length(unique(inoc.samp)))
-        k <- 1
-        for (i in unique(inoc.samp)) {
-          f[k] <- sum(inoc.samp==i)
-          k <- k+1
-        }
-        freq.log[[newinfect]] <- f # frequency of types
+      #if (runif(1,0,1) < curinfrate) { # infection?
+      if (sum(pinf)>0) {
+      	for (kp in 1:sum(pinf)) {
+	        tot.inf <- tot.inf+1
+	        # who got infected? and by whom?
+	        newinfect <- cur.sus[which(pinf==1)[kp]]
+	          
+	        if (length(cur.inf)==1) {
+	            inf.source <- c(inf.source, cur.inf)
+	        } else if (is.null(nmat)) {
+	            inf.source <- c(inf.source, sample(cur.inf,1)) # sample source at random
+	        } else {
+	          	inf.source <- c(inf.source, sample(cur.inf, 1, prob=inf.mat[newinfect,cur.inf]))
+	        }
+	        
+	        inf.ID <- c(inf.ID, newinfect)
+	        cur.inf <- c(cur.inf, newinfect) # add to current infectives
+	        cur.sus <- cur.sus[-which(cur.sus==newinfect)] # Remove susceptible
+	        inf.times <- c(inf.times, time) # new infection time
+	        rec.times <- c(rec.times, time+max(1,rgeom(1,rem.rate))) # Don't recover today!
+	        if (samp.schedule == "individual") {
+	          sample.times <- c(sample.times, time+samp.freq)
+	        } else if (samp.schedule == "calendar") {
+	          sample.times <- c(sample.times, ceiling(time/samp.freq)*samp.freq)
+	        } else if (samp.schedule == "random") {
+	          if (rec.times[tot.inf]>time+1) {
+	            sample.times <- c(sample.times, sample(time:(rec.times[tot.inf]-1),1))
+	          } else {
+	            sample.times <- c(sample.times, time)
+	          }
+	        }
+	        if (sample.times[tot.inf]>=rec.times[tot.inf]) {
+	          sample.times[tot.inf] <- Inf
+	        }
+	        # pass on strain
+	        src <- inf.ID[which(inf.ID==inf.source[tot.inf])] # Source of infection
+	        if (length(strain.log[[src]])==1) { # if source has clonal infection
+	          inoc.samp <- rep(strain.log[[src]], inoc.size)
+	          if (0%in%inoc.samp) {
+	            stop("Zeroes in inoculum")
+	          }
+	        } else {
+	          inoc.samp <- sample(strain.log[[src]], inoc.size, 
+	                              prob=freq.log[[src]], replace=T) # take random sample
+	          if (0%in%inoc.samp) {
+	            stop("Zeroes in inoculum")
+	          }
+	        }
+	        strain.log[[newinfect]] <- unique(inoc.samp) # distinct types in new infection
+	        f <- numeric(length(unique(inoc.samp)))
+	        k <- 1
+	        for (i in unique(inoc.samp)) {
+	          f[k] <- sum(inoc.samp==i)
+	          k <- k+1
+	        }
+	        freq.log[[newinfect]] <- f # frequency of types
+      	}
       }
+      
       # mutate existing strains for each individual
       if (is.null(eff.cur.inf)) {
         cinf <- inf.ID[which(inf.ID%in%cur.inf)]
